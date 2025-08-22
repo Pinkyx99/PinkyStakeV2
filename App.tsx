@@ -1,389 +1,371 @@
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import Header from './components/Header';
-import GameCard from './components/GameCard';
-import AnimatedParticles from './components/AnimatedParticles';
-import ErrorBoundary from './components/ErrorBoundary';
-import { type Game, type CSGOBattle } from './types';
-import ChickenGame from './components/games/ChickenGame';
-import BlackjackGame from './components/games/BlackjackGame';
-import DoorsGame from './components/games/DoorsGame';
-import DiceGame from './components/games/DiceGame';
-import RouletteGame from './components/games/RouletteGame';
-import CrashGame from './components/games/CrashGame';
-import LimboGame from './components/games/LimboGame';
-import KenoGame from './components/games/KenoGame';
-import WheelGame from './components/games/WheelGame';
-import FlipGame from './components/games/FlipGame';
-import MinesGame from './components/games/MinesGame';
-import MysteryBoxGame from './components/games/MysteryBoxGame';
-import MysteryBoxLobby from './components/games/mysterybox/MysteryBoxLobby';
-import { allMysteryBoxes } from './components/games/mysterybox/data';
-import CSGOGame from './components/games/CSGOGame';
-import CSGOCaseLobby from './components/games/csgo/CSGOCaseLobby';
-import { allCSGOCases } from './components/games/csgo/data';
-import ProfilePage from './components/ProfilePage';
-import CSGOUpgrader from './components/games/csgo/CSGOUpgrader';
-import CSGOCaseBattlesLobby from './components/games/csgo/CSGOCaseBattlesLobby';
-import { useFreeCrate } from './hooks/useFreeCrate';
-import PrizeToast from './components/PrizeToast';
-import { useUser } from './contexts/UserContext';
-import { GoogleGenAI, Chat } from '@google/genai';
-import ChatIcon from './components/icons/ChatIcon';
-import SendIcon from './components/icons/SendIcon';
-import SpinnerIcon from './components/icons/SpinnerIcon';
-import CloseIcon from './components/icons/CloseIcon';
 
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from './contexts/AuthContext.tsx';
+import AuthPage from './components/AuthPage.tsx';
+import LeaderboardPage from './components/LeaderboardPage.tsx';
+import Header from './components/Header.tsx';
+import LobbyPage from './components/LobbyPage.tsx';
+import CSGOCaseLobby from './components/games/csgo/CSGOCaseLobby.tsx';
+import MysteryBoxLobby from './components/games/mysterybox/MysteryBoxLobby.tsx';
+import CSGOGame from './components/games/csgo/CSGOGame.tsx';
+import MysteryBoxGame from './components/games/MysteryBoxGame.tsx';
+import { allCSGOCases } from './components/games/csgo/data.ts';
+import { allMysteryBoxes } from './components/games/mysterybox/data.ts';
+import ChickenGame from './components/games/ChickenGame.tsx';
+import BlackjackGame from './components/games/BlackjackGame.tsx';
+import DoorsGame from './components/games/DoorsGame.tsx';
+import DiceGame from './components/games/DiceGame.tsx';
+import RouletteGame from './components/games/RouletteGame.tsx';
+import CrashGame from './components/games/CrashGame.tsx';
+import FlipGame from './components/games/FlipGame.tsx';
+import LimboGame from './components/games/LimboGame.tsx';
+import KenoGame from './components/games/KenoGame.tsx';
+import WheelGame from './components/games/WheelGame.tsx';
+import PlinkoGame from './components/games/PlinkoGame.tsx';
+import CSGOUpgrader from './components/games/csgo/CSGOUpgrader.tsx';
+import CSGOCaseBattlesLobby from './components/games/csgo/CSGOCaseBattlesLobby.tsx';
+import AdminConsole from './components/AdminConsole.tsx';
+import CloseIcon from './components/icons/CloseIcon.tsx';
+import CheckIcon from './components/icons/CheckIcon.tsx';
+import Chat from './components/Chat.tsx';
+import UserProfileModal from './components/UserProfileModal.tsx';
+import MoneyRainBanner from './components/MoneyRainBanner.tsx';
+import { supabase } from './lib/supabaseClient.ts';
+import type { Profile, MoneyRain, CSGOInventoryItem, CSGOItem, CSGOBattle, BoxItem, InventoryItem, DailyRewardState } from './types.ts';
+import InventoryPage from './components/InventoryPage.tsx';
 
-const ALL_GAMES: Game[] = [
-  { id: 1, title: 'Chicken', slug: 'chicken', imageUrl: 'https://i.imgur.com/8PdQTGW.png', color: 'orange' },
-  { id: 2, title: 'Blackjack', slug: 'blackjack', imageUrl: 'https://i.imgur.com/5ui2vxB.png', color: 'purple' },
-  { id: 3, title: 'Doors', slug: 'doors', imageUrl: 'https://i.imgur.com/ntkG6tv.png', color: 'blue' },
-  { id: 16, title: 'Roulette', slug: 'roulette', imageUrl: 'https://i.imgur.com/eqkkVYJ.png', color: 'red' },
-  { id: 14, title: 'Dice', slug: 'dice', imageUrl: 'https://i.imgur.com/Uy1mnkF.png', color: 'green' },
-  { id: 4, title: 'Crash', slug: 'crash', imageUrl: 'https://i.imgur.com/cu8O4GF.png', color: 'purple' },
-  { id: 17, title: 'Limbo', slug: 'limbo', imageUrl: 'https://i.imgur.com/picS5KQ.png', color: 'purple' },
-  { id: 18, title: 'Keno', slug: 'keno', imageUrl: 'https://i.imgur.com/uKMIrL9.png', color: 'blue' },
-  { id: 19, title: 'Wheel', slug: 'wheel', imageUrl: 'https://i.imgur.com/7xzgBDx.png', color: 'yellow' },
-  { id: 21, title: 'Flip', slug: 'flip', imageUrl: 'https://i.imgur.com/nxpJKT1.png', color: 'yellow' },
-  { id: 22, title: 'Mystery Boxes', slug: 'mysterybox', imageUrl: 'https://i.imgur.com/6l3v02N.png', color: 'cyan' },
-  { id: 23, title: 'CSGO Gambling', slug: 'csgo', imageUrl: 'https://i.imgur.com/sIqj4t2.png', color: 'teal' },
-  { id: 6, title: '', imageUrl: 'https://i.imgur.com/yO8pB9f.png', color: 'green' },
-  { id: 7, title: '', imageUrl: 'https://i.imgur.com/3q1sJ2L.png', color: 'brown' },
-  { id: 8, title: '', imageUrl: 'https://i.imgur.com/s6p4eF8.png', color: 'teal' },
-  { id: 9, title: '', imageUrl: 'https://i.imgur.com/5J7m1jR.png', color: 'yellow' },
-  { id: 10, title: '', imageUrl: 'https://i.imgur.com/9n9s8Z2.png', color: 'green' },
-  { id: 11, title: '', imageUrl: 'https://i.imgur.com/9f8D4K7.png', color: 'blue' },
-  { id: 12, title: '', imageUrl: 'https://i.imgur.com/cO1k2L4.png', color: 'pink' },
-  { id: 13, title: '', imageUrl: 'https://i.imgur.com/z1kH0B5.png', color: 'cyan' },
+export type Page = 
+  | { name: 'lobby' }
+  | { name: 'leaderboard' }
+  | { name: 'inventory' }
+  | { name: 'csgo-lobby' }
+  | { name: 'csgo-case'; id: string }
+  | { name: 'csgo-upgrader' }
+  | { name: 'csgo-battles-lobby' }
+  | { name: 'csgo-battles'; id: string }
+  | { name: 'mysterybox-lobby' }
+  | { name: 'mysterybox-case'; id: string }
+  | { name: 'chicken' }
+  | { name: 'blackjack' }
+  | { name: 'doors' }
+  | { name: 'dice' }
+  | { name: 'roulette' }
+  | { name: 'crash' }
+  | { name: 'flip' }
+  | { name: 'limbo' }
+  | { name: 'keno' }
+  | { name: 'wheel' }
+  | { name: 'plinko' };
+
+// --- Daily Reward Helpers & Components ---
+const isSameDay = (d1: Date, d2: Date) => {
+    return d1.getFullYear() === d2.getFullYear() &&
+           d1.getMonth() === d2.getMonth() &&
+           d1.getDate() === d2.getDate();
+};
+const isYesterday = (d1: Date, d2: Date) => {
+    const yesterday = new Date(d2);
+    yesterday.setDate(d2.getDate() - 1);
+    return isSameDay(d1, yesterday);
+};
+
+const DAILY_REWARDS = [
+    { day: 1, amount: 10.00, item: null },
+    { day: 2, amount: 20.00, item: null },
+    { day: 3, amount: 30.00, item: null },
+    { day: 4, amount: 50.00, item: null },
+    { day: 5, amount: 75.00, item: null },
+    { day: 6, amount: 100.00, item: null },
+    { day: 7, amount: 250.00, item: { boxId: 'apple-box' } },
 ];
 
-const GAMES: Game[] = ALL_GAMES.filter(game => game.slug && !['mysterybox', 'csgo'].includes(game.slug));
-
-const MainPage: React.FC<{ onGameSelect: (game: Game) => void }> = ({ onGameSelect }) => (
-  <main className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <div className="text-center mb-16">
-      <h1 className="font-bebas text-6xl md:text-8xl font-black uppercase tracking-widest drop-shadow-2xl">
-        <span className="text-white text-glow-purple">MINI</span> <span className="text-yellow-400 animate-title-glow">GAMES</span>
-      </h1>
-    </div>
-    <div>
-       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6 md:gap-8">
-        {GAMES.map(game => (
-          <GameCard key={game.id} game={game} onSelect={() => onGameSelect(game)} />
-        ))}
-      </div>
-    </div>
-  </main>
+const LockIcon: React.FC<React.SVGProps<SVGSVGElement>> = (props) => (
+  <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" {...props}>
+    <path strokeLinecap="round" strokeLinejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 00-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25-2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+  </svg>
 );
 
-type Message = {
-  role: 'user' | 'model';
-  content: string;
-};
+const DailyRewardModal: React.FC<{ isOpen: boolean; onClose: () => void; onClaim: (day: number, amount: number, item: {boxId: string} | null) => void; streak: number; }> = ({ isOpen, onClose, onClaim, streak }) => {
+    if (!isOpen) return null;
 
-const ChatPanel: React.FC<{ isOpen: boolean; onClose: () => void; }> = ({ isOpen, onClose }) => {
-    const [messages, setMessages] = useState<Message[]>([
-        { role: 'model', content: "Hello! I'm G-Mini, your friendly game assistant. How can I help you today?" }
-    ]);
-    const [input, setInput] = useState('');
-    const [loading, setLoading] = useState(false);
-    const messagesEndRef = useRef<HTMLDivElement>(null);
-    const chatRef = useRef<Chat | null>(null);
-    const apiKeyAvailable = typeof process !== 'undefined' && process.env && process.env.API_KEY;
-
-    const scrollToBottom = useCallback(() => {
-        messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-    }, []);
-
-    useEffect(() => {
-        scrollToBottom();
-    }, [messages, loading, scrollToBottom]);
-    
-    const handleSendMessage = async (e: React.FormEvent) => {
-        e.preventDefault();
-        if (!input.trim() || loading) return;
-
-        let chat = chatRef.current;
-        if (!chat) {
-            try {
-                if (!apiKeyAvailable) {
-                    throw new Error("API key not available.");
-                }
-                const ai = new GoogleGenAI({ apiKey: process.env.API_KEY! });
-                chat = ai.chats.create({
-                    model: 'gemini-2.5-flash',
-                    config: {
-                        systemInstruction: "You are a friendly and helpful assistant for a gaming website. Be concise and upbeat. Your name is G-Mini. Don't mention you are an AI model."
-                    }
-                });
-                chatRef.current = chat;
-            } catch (error) {
-                console.error("Gemini API initialization error:", error);
-                setMessages(prev => [...prev, { role: 'model', content: "Sorry, I'm having trouble connecting. Please try again later." }]);
-                return;
-            }
-        }
-
-        const userMessage: Message = { role: 'user', content: input };
-        setMessages(prev => [...prev, userMessage]);
-        const messageToSend = input;
-        setInput('');
-        setLoading(true);
-
-        try {
-            const stream = await chat.sendMessageStream({ message: messageToSend });
-            
-            let modelResponse = '';
-            setMessages(prev => [...prev, { role: 'model', content: '' }]);
-
-            for await (const chunk of stream) {
-                modelResponse += chunk.text;
-                setMessages(prev => {
-                    const newMessages = [...prev];
-                    const lastMessage = newMessages[newMessages.length - 1];
-                    if (lastMessage && lastMessage.role === 'model') {
-                       lastMessage.content = modelResponse;
-                    }
-                    return newMessages;
-                });
-            }
-        } catch (error) {
-            console.error("Gemini API error:", error);
-            setMessages(prev => [...prev, { role: 'model', content: "Sorry, I'm having trouble connecting. Please try again later." }]);
-        } finally {
-            setLoading(false);
-        }
-    };
-    
     return (
-      <div className={`fixed bottom-6 right-6 z-[70] w-full max-w-sm rounded-xl shadow-2xl bg-slate-900/80 backdrop-blur-md border border-slate-700 transition-all duration-300 ease-in-out ${isOpen ? 'translate-y-0 opacity-100' : 'translate-y-16 opacity-0 pointer-events-none'}`}>
-        <div className="flex flex-col h-[60vh]">
-          <header className="flex items-center justify-between p-3 border-b border-slate-700">
-            <h3 className="font-bold text-white">Game Assistant</h3>
-            <button onClick={onClose} className="text-slate-400 hover:text-white"><CloseIcon className="w-6 h-6" /></button>
-          </header>
-          <div className="flex-grow p-3 overflow-y-auto space-y-4">
-            {messages.map((msg, index) => (
-              <div key={index} className={`flex items-end gap-2 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div className={`max-w-[80%] p-3 rounded-2xl ${msg.role === 'user' ? 'bg-purple-600 rounded-br-none' : 'bg-slate-700 rounded-bl-none'}`}>
-                  <p className="text-sm text-white whitespace-pre-wrap">{msg.content}</p>
+        <div className="fixed inset-0 z-[1000] flex items-center justify-center bg-black/60 backdrop-blur-sm daily-reward-backdrop" onClick={onClose}>
+            <div className="w-full max-w-4xl daily-reward-modal rounded-lg p-6 sm:p-8" onClick={e => e.stopPropagation()}>
+                <div className="text-center mb-6">
+                    <h2 className="text-3xl font-bold text-yellow-300">Daily Rewards</h2>
+                    <p className="text-slate-400">Come back every day to claim bigger rewards!</p>
                 </div>
-              </div>
-            ))}
-            {loading && (
-              <div className="flex justify-start">
-                  <div className="bg-slate-700 p-3 rounded-2xl rounded-bl-none">
-                      <div className="flex items-center gap-1.5">
-                          <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0s'}}></span>
-                          <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></span>
-                          <span className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></span>
-                      </div>
-                  </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-          <div className="p-3 border-t border-slate-700">
-             {!apiKeyAvailable ? (
-                <p className="text-center text-xs text-yellow-400">API_KEY not configured. Chat is disabled.</p>
-             ) : (
-                <form onSubmit={handleSendMessage} className="flex items-center gap-2">
-                    <input 
-                        type="text" 
-                        value={input} 
-                        onChange={e => setInput(e.target.value)}
-                        placeholder="Ask something..."
-                        className="flex-grow bg-slate-800 border border-slate-600 rounded-full px-4 py-2 text-sm text-white focus:outline-none focus:ring-2 focus:ring-purple-500"
-                    />
-                    <button type="submit" disabled={loading} className="w-10 h-10 flex items-center justify-center bg-purple-600 text-white rounded-full transition-colors hover:bg-purple-700 disabled:bg-slate-600">
-                        {loading ? <SpinnerIcon className="w-5 h-5" /> : <SendIcon className="w-5 h-5" />}
-                    </button>
-                </form>
-             )}
-          </div>
+                <div className="grid grid-cols-4 lg:grid-cols-7 gap-4">
+                    {DAILY_REWARDS.map(reward => {
+                        const status = reward.day < streak ? 'claimed' : reward.day === streak ? 'available' : 'locked';
+                        return (
+                            <div key={reward.day} className={`daily-reward-card rounded-lg p-3 text-center flex flex-col justify-between h-40 ${status}`}>
+                                <p className="font-bold text-sm bg-black/30 rounded-full px-2 py-0.5 mx-auto">Day {reward.day}</p>
+                                <div className="flex-grow flex flex-col items-center justify-center">
+                                    <p className="font-extrabold text-2xl text-yellow-400">€{reward.amount.toFixed(2)}</p>
+                                    {reward.item && <p className="text-xs text-purple-300">+ Mystery Item</p>}
+                                </div>
+                                {status === 'claimed' && <div className="claimed-checkmark"><CheckIcon className="w-16 h-16"/></div>}
+                                {status === 'locked' && <div className="claimed-checkmark"><LockIcon className="w-12 h-12"/></div>}
+                                {status === 'available' && <button onClick={() => onClaim(reward.day, reward.amount, reward.item)} className="claim-button w-full py-2 rounded-md text-black font-bold text-sm">Claim</button>}
+                            </div>
+                        );
+                    })}
+                </div>
+            </div>
         </div>
-      </div>
     );
 };
 
+const AnnouncementBanner: React.FC<{ message: string; onClose: () => void }> = ({ message, onClose }) => (
+    <div className="bg-purple-600 text-white text-center p-2 flex items-center justify-center gap-4 relative">
+        <p className="font-semibold">{message}</p>
+        <button onClick={onClose} className="absolute right-4 top-1/2 -translate-y-1/2 text-white/70 hover:text-white">
+            <CloseIcon className="w-5 h-5" />
+        </button>
+    </div>
+);
 
 const App: React.FC = () => {
-  const getPath = () => window.location.hash.substring(1) || '/';
-  const [path, setPath] = useState(getPath());
-  const { adjustBalance } = useUser();
-  const { timeLeft, canClaim, resetTimer } = useFreeCrate();
-  const [toast, setToast] = useState<{ message: string; amount: number } | null>(null);
-  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const [isChatOpen, setIsChatOpen] = useState(false);
-  const [csgoBattles, setCsgoBattles] = useState<CSGOBattle[]>([]);
-
-  useEffect(() => {
-    // Clear timer on unmount to prevent memory leaks or state updates on unmounted component
-    return () => {
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
-    };
-  }, []);
-  
-  const navigate = useCallback((to: string) => {
-    window.location.hash = to;
-  }, []);
-  
-  useEffect(() => {
-    const handleHashChange = () => setPath(getPath());
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
-  }, []);
-  
-  const handleGameSelect = (game: Game) => {
-    if (game.slug) {
-      navigate(`/game/${game.slug}`);
-    } else {
-      alert(`The game "${game.title || 'selected game'}" is not yet implemented.`);
-    }
-  };
-
-  const handleGoBack = () => {
-    navigate('/');
-  };
-  
-  const generatePrize = () => {
-    const r = Math.random();
-    if (r < 0.01) return 50; // 1% for $50
-    if (r < 0.15) return 10; // 14% for $10
-    if (r < 0.30) return 6;  // 15% for $6
-    if (r < 0.45) return 4;  // 15% for $4
-    if (r < 0.60) return 2;  // 15% for $2
+    const { profile, isAdmin, adjustBalance } = useAuth();
+    const [page, setPage] = useState<Page>({ name: 'lobby' });
+    const [isConsoleVisible, setIsConsoleVisible] = useState(false);
+    const [announcement, setAnnouncement] = useState<string | null>(null);
+    const [isChatVisible, setIsChatVisible] = useState(false);
+    const [viewingProfile, setViewingProfile] = useState<Profile | null>(null);
+    const [activeRain, setActiveRain] = useState<MoneyRain | null>(null);
     
-    // Remaining 40%
-    const remainingR = Math.random();
-    if (remainingR < 0.75) { // 30% of total
-        // Common low-tier prizes $1, $3, $5, $7, $8, $9
-        const commonLow = [1, 3, 5, 7, 8, 9];
-        return commonLow[Math.floor(Math.random() * commonLow.length)];
-    } else { // 10% of total
-        // Higher-tier prizes $11 - $49
-        return Math.floor(Math.random() * (49 - 11 + 1)) + 11;
-    }
-  };
+    // Daily Reward State
+    const [dailyRewardState, setDailyRewardState] = useState<DailyRewardState | null>(null);
+    const [isDailyRewardModalOpen, setIsDailyRewardModalOpen] = useState(false);
 
-  const handleClaimFreePrize = () => {
-      if (!canClaim) return;
+    // Inventory States
+    const [csgoInventory, setCsgoInventory] = useState<CSGOInventoryItem[]>([]);
+    const [mysteryBoxInventory, setMysteryBoxInventory] = useState<InventoryItem[]>([]);
+    const [activeBattles, setActiveBattles] = useState<CSGOBattle[]>([]);
 
-      if (toastTimerRef.current) {
-        clearTimeout(toastTimerRef.current);
-      }
+    const addToCsgoInventory = (items: CSGOItem[]) => {
+        const newInventoryItems: CSGOInventoryItem[] = items.map(item => ({
+            ...item,
+            instanceId: `${item.id}-${Date.now()}-${Math.random()}`
+        }));
+        setCsgoInventory(prev => [...prev, ...newInventoryItems]);
+    };
 
-      const prize = generatePrize();
-      adjustBalance(prize);
-      resetTimer();
-      setToast({ message: "Free money from owner :)", amount: prize });
+    const removeFromCsgoInventory = (instanceIds: string[]) => {
+        setCsgoInventory(prev => prev.filter(item => !instanceIds.includes(item.instanceId)));
+    };
+    
+    const addToMysteryBoxInventory = (items: BoxItem | BoxItem[]) => {
+        const itemsToAdd = Array.isArray(items) ? items : [items];
+        setMysteryBoxInventory(prev => {
+            const newInventory = [...prev];
+            itemsToAdd.forEach(item => {
+                const existingItemIndex = newInventory.findIndex(i => i.id === item.id);
+                if (existingItemIndex > -1) {
+                    newInventory[existingItemIndex] = { ...newInventory[existingItemIndex], quantity: newInventory[existingItemIndex].quantity + 1 };
+                } else {
+                    newInventory.push({ ...item, quantity: 1 });
+                }
+            });
+            return newInventory;
+        });
+    };
 
-      toastTimerRef.current = setTimeout(() => {
-        setToast(null);
-      }, 4000); // Duration matches the CSS animation
-  };
+    const sellFromMysteryBoxInventory = (itemId: number, price: number) => {
+        setMysteryBoxInventory(prev => {
+            const itemToSell = prev.find(i => i.id === itemId);
+            if (!itemToSell) return prev;
+            
+            if (itemToSell.quantity > 1) {
+                return prev.map(i => i.id === itemId ? { ...i, quantity: i.quantity - 1 } : i);
+            } else {
+                return prev.filter(i => i.id !== itemId);
+            }
+        });
+        adjustBalance(price);
+    };
 
-  const handleToggleChat = () => setIsChatOpen(prev => !prev);
+    useEffect(() => {
+        // Real-time listener for Money Rains
+        const rainChannel = supabase.channel('money-rains')
+            .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'money_rains' }, (payload) => {
+                const newRain = payload.new as MoneyRain;
+                if (new Date(newRain.expires_at) > new Date()) {
+                    setActiveRain(newRain);
+                }
+            })
+            .subscribe();
 
-  const renderPage = () => {
-    const parts = path.split('/').filter(Boolean);
-    const route = parts[0];
+        // Real-time listener for Announcements
+        const announceChannel = supabase.channel('announcements');
+        announceChannel
+            .on('broadcast', { event: 'new-announcement' }, ({ payload }) => {
+                if (payload.message) {
+                    setAnnouncement(payload.message);
+                    // Auto-hide after 30 seconds
+                    setTimeout(() => setAnnouncement(null), 30000); 
+                }
+            })
+            .subscribe();
 
-    if (route === 'profile') {
-        return <ProfilePage onBack={handleGoBack} />;
-    }
+        return () => {
+            supabase.removeChannel(rainChannel);
+            supabase.removeChannel(announceChannel);
+        };
+    }, []);
+    
+    // Daily Rewards Logic
+    useEffect(() => {
+        if (!profile) return;
+        const REWARD_KEY = `daily_reward_${profile.id}`;
+        try {
+            const savedStateRaw = localStorage.getItem(REWARD_KEY);
+            const savedState: DailyRewardState = savedStateRaw ? JSON.parse(savedStateRaw) : { streak: 0, lastClaimedTimestamp: 0 };
+            const now = new Date();
+            const lastClaimedDate = new Date(savedState.lastClaimedTimestamp);
 
-    if (route === 'game') {
-      const gameSlug = parts[1];
+            if (!isSameDay(now, lastClaimedDate)) {
+                let currentStreak = 1; // Default to 1 if it's a new day
+                if (isYesterday(lastClaimedDate, now)) {
+                    currentStreak = (savedState.streak % 7) + 1;
+                }
+                const finalState = { ...savedState, streak: currentStreak };
+                setDailyRewardState(finalState);
+                setIsDailyRewardModalOpen(true);
+            } else {
+                setDailyRewardState(savedState);
+                setIsDailyRewardModalOpen(false);
+            }
+        } catch (error) {
+            console.error("Failed to process daily rewards", error);
+            localStorage.removeItem(REWARD_KEY);
+        }
+    }, [profile?.id]);
 
-      if (gameSlug === 'mysterybox') {
-        const boxId = parts[2];
-        if (boxId) {
-            const selectedBox = allMysteryBoxes.find(b => b.id === boxId);
-            if (selectedBox) {
-                return <MysteryBoxGame onBack={() => navigate('/game/mysterybox')} box={selectedBox} />;
+    const handleClaimReward = useCallback((day: number, amount: number, item: {boxId: string} | null) => {
+        if (!profile) return;
+        adjustBalance(amount);
+        if (item) {
+            const boxToGive = allMysteryBoxes.find(b => b.id === item.boxId);
+            if (boxToGive) {
+                // Give a random item from the box
+                addToMysteryBoxInventory(boxToGive.items[Math.floor(Math.random() * boxToGive.items.length)]);
             }
         }
-        return <MysteryBoxLobby onBack={handleGoBack} onNavigate={navigate} />;
-      }
-      
-      if (gameSlug === 'csgo') {
-          const subRoute = parts[2];
-          const dynamicId = parts[3];
+        
+        const newState = { streak: day, lastClaimedTimestamp: Date.now() };
+        localStorage.setItem(`daily_reward_${profile.id}`, JSON.stringify(newState));
+        setDailyRewardState(newState);
+        setIsDailyRewardModalOpen(false);
+    }, [profile?.id, adjustBalance, addToMysteryBoxInventory]);
 
-          if (subRoute === 'upgrader') {
-              return <CSGOUpgrader onBack={() => navigate('/game/csgo')} />;
-          }
-          if (subRoute === 'battles') {
-              return <CSGOCaseBattlesLobby battleId={dynamicId} battles={csgoBattles} setBattles={setCsgoBattles} onNavigate={navigate} />;
-          }
-          if (subRoute) { // Must be a caseId
-              const selectedCase = allCSGOCases.find(c => c.id === subRoute);
-              if (selectedCase) {
-                  return <CSGOGame onBack={() => navigate('/game/csgo')} case={selectedCase} />;
-              }
-          }
-          return <CSGOCaseLobby onBack={handleGoBack} onNavigate={navigate} />;
-      }
-      
-      switch(gameSlug) {
-        case 'chicken': return <ChickenGame onBack={handleGoBack} />;
-        case 'blackjack': return <BlackjackGame onBack={handleGoBack} />;
-        case 'doors': return <DoorsGame onBack={handleGoBack} />;
-        case 'dice': return <DiceGame onBack={handleGoBack} />;
-        case 'roulette': return <RouletteGame onBack={handleGoBack} />;
-        case 'crash': return <CrashGame onBack={handleGoBack} />;
-        case 'limbo': return <LimboGame onBack={handleGoBack} />;
-        case 'keno': return <KenoGame onBack={handleGoBack} />;
-        case 'wheel': return <WheelGame onBack={handleGoBack} />;
-        case 'flip': return <FlipGame onBack={handleGoBack} />;
-        case 'mines': return <MinesGame onBack={handleGoBack} />;
-        default:
-          return null;
-      }
+
+    if (!profile) {
+        return <AuthPage />;
     }
     
-    return (
-      <>
-        <div className="relative min-h-screen w-full bg-[#1a1d3a] text-white font-poppins overflow-x-hidden">
-          <AnimatedParticles />
-          <Header 
-            timeLeft={timeLeft}
-            canClaim={canClaim}
-            onOpenCrate={handleClaimFreePrize}
-            onNavigate={navigate}
-          />
-          <div className="relative z-10" style={{ isolation: 'isolate' }}>
-             <MainPage onGameSelect={handleGameSelect} />
-          </div>
-        </div>
-        {toast && (
-            <PrizeToast
-                message={toast.message}
-                amount={toast.amount}
-            />
-        )}
-      </>
-    );
-  };
+    const renderPage = () => {
+        switch (page.name) {
+            case 'lobby':
+                return <LobbyPage setPage={setPage} />;
+            case 'leaderboard':
+                return <LeaderboardPage />;
+            case 'inventory':
+                 return <InventoryPage 
+                           csgoInventory={csgoInventory}
+                           mysteryBoxInventory={mysteryBoxInventory}
+                           sellFromCsgoInventory={(instanceId: string, price: number) => {
+                               removeFromCsgoInventory([instanceId]);
+                               adjustBalance(price);
+                           }}
+                           sellFromMysteryBoxInventory={sellFromMysteryBoxInventory}
+                        />;
+            case 'csgo-lobby':
+                return <CSGOCaseLobby setPage={setPage} addToCsgoInventory={addToCsgoInventory} />;
+            case 'csgo-upgrader':
+                return <CSGOUpgrader 
+                           setPage={setPage}
+                           inventory={csgoInventory}
+                           addToInventory={addToCsgoInventory}
+                           removeFromInventory={removeFromCsgoInventory} 
+                       />;
+            case 'csgo-battles-lobby':
+                 return <CSGOCaseBattlesLobby battles={activeBattles} setBattles={setActiveBattles} setPage={setPage} />;
+            case 'csgo-battles':
+                 return <CSGOCaseBattlesLobby battles={activeBattles} setBattles={setActiveBattles} setPage={setPage} battleId={page.id} />;
+            case 'mysterybox-lobby':
+                return <MysteryBoxLobby setPage={setPage} />;
+            case 'csgo-case':
+                const selectedCase = allCSGOCases.find(c => c.id === page.id);
+                if (!selectedCase) {
+                    return <div className="text-center p-8 text-white">Case not found. <button onClick={() => setPage({name: 'csgo-lobby'})} className="text-pink-400 underline">Return to lobby.</button></div>;
+                }
+                return <CSGOGame setPage={setPage} case={selectedCase} addToCsgoInventory={addToCsgoInventory} />;
+            case 'mysterybox-case':
+                const selectedBox = allMysteryBoxes.find(b => b.id === page.id);
+                if (!selectedBox) {
+                    return <div className="text-center p-8 text-white">Box not found. <button onClick={() => setPage({name: 'mysterybox-lobby'})} className="text-pink-400 underline">Return to lobby.</button></div>;
+                }
+                return <MysteryBoxGame onBack={() => setPage({ name: 'mysterybox-lobby' })} box={selectedBox} addToMysteryBoxInventory={addToMysteryBoxInventory} />;
+            case 'chicken':
+                return <ChickenGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'blackjack':
+                return <BlackjackGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'doors':
+                return <DoorsGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'dice':
+                return <DiceGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'roulette':
+                return <RouletteGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'crash':
+                return <CrashGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'flip':
+                return <FlipGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'limbo':
+                return <LimboGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'keno':
+                return <KenoGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'wheel':
+                return <WheelGame onBack={() => setPage({ name: 'lobby' })} />;
+            case 'plinko':
+                return <PlinkoGame onBack={() => setPage({ name: 'lobby' })} />;
+            default:
+                return <LobbyPage setPage={setPage} />;
+        }
+    }
 
-  return (
-    <ErrorBoundary>
-      {renderPage()}
-      <ChatPanel isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
-      <button
-        onClick={handleToggleChat}
-        className={`fixed bottom-6 right-6 z-[60] w-16 h-16 bg-purple-600 rounded-full shadow-lg flex items-center justify-center text-white transition-all duration-300 ease-in-out hover:bg-purple-700 transform hover:scale-110 focus:outline-none focus:ring-4 focus:ring-purple-400 focus:ring-opacity-50
-          ${isChatOpen ? 'opacity-0 scale-90 pointer-events-none' : 'opacity-100 scale-100'}`}
-        aria-label="Toggle Chat"
-      >
-        <ChatIcon className="w-8 h-8" />
-      </button>
-    </ErrorBoundary>
-  );
+    return (
+        <div className="min-h-screen w-full">
+            {activeRain && <MoneyRainBanner rain={activeRain} onClaimed={() => setActiveRain(null)} />}
+            {announcement && <AnnouncementBanner message={announcement} onClose={() => setAnnouncement(null)} />}
+            
+            <Header 
+                page={page}
+                setPage={setPage} 
+                onToggleConsole={() => setIsConsoleVisible(v => !v)}
+                onToggleChat={() => setIsChatVisible(v => !v)}
+            />
+                
+            <main className={`transition-all duration-300 ${isChatVisible ? 'md:mr-[350px]' : ''}`}>
+                {renderPage()}
+            </main>
+            
+            {isAdmin && <AdminConsole isVisible={isConsoleVisible} />}
+            <Chat isVisible={isChatVisible} onClose={() => setIsChatVisible(false)} onProfileClick={setViewingProfile} />
+            {viewingProfile && <UserProfileModal userProfile={viewingProfile} onClose={() => setViewingProfile(null)} />}
+            
+            {dailyRewardState && (
+                <DailyRewardModal
+                    isOpen={isDailyRewardModalOpen}
+                    onClose={() => setIsDailyRewardModalOpen(false)}
+                    onClaim={handleClaimReward}
+                    streak={dailyRewardState.streak}
+                />
+            )}
+        </div>
+    );
 };
 
 export default App;
