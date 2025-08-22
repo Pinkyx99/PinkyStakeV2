@@ -1,9 +1,8 @@
-
 import React, { useState, useMemo, useCallback } from 'react';
-import type { BoxItem } from '../../../types';
-import { useUser } from '../../../contexts/UserContext';
-import { useSound } from '../../../hooks/useSound';
-import CloseIcon from '../../icons/CloseIcon';
+import type { BoxItem } from '../../../types.ts';
+import { useAuth } from '../../../contexts/AuthContext.tsx';
+import { useSound } from '../../../hooks/useSound.ts';
+import CloseIcon from '../../icons/CloseIcon.tsx';
 
 interface MultiWinItemCardProps {
     item: BoxItem;
@@ -32,10 +31,11 @@ const MultiWinItemCard: React.FC<MultiWinItemCardProps> = ({ item, isSelling, on
 interface MultiWinModalProps {
     items: BoxItem[];
     onClose: () => void;
+    addToMysteryBoxInventory: (items: BoxItem | BoxItem[]) => void;
 }
 
-const MultiWinModal: React.FC<MultiWinModalProps> = ({ items, onClose }) => {
-    const { adjustBalance, addToInventory } = useUser();
+const MultiWinModal: React.FC<MultiWinModalProps> = ({ items, onClose, addToMysteryBoxInventory }) => {
+    const { adjustBalance } = useAuth();
     const { playSound } = useSound();
     const [sellSelections, setSellSelections] = useState<Record<string, boolean>>({});
 
@@ -91,9 +91,7 @@ const MultiWinModal: React.FC<MultiWinModalProps> = ({ items, onClose }) => {
         }
         if (itemsToKeep.length > 0) {
             playSound('click');
-            itemsToKeep.forEach(item => {
-                addToInventory(item);
-            });
+            addToMysteryBoxInventory(itemsToKeep);
         }
         onClose();
     };

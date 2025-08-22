@@ -1,22 +1,19 @@
-
-
-
 import React, { useState, useMemo, useEffect, useCallback, useRef } from 'react';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import HitIcon from '../icons/HitIcon';
-import StandIcon from '../icons/StandIcon';
-import SplitIcon from '../icons/SplitIcon';
-import DoubleIcon from '../icons/DoubleIcon';
-import CardComponent from './blackjack/Card';
-import { createDeck, shuffleDeck, getHandValue, type Card as CardType, getCardValue } from './blackjack/deck';
-import { useUser } from '../../contexts/UserContext';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import HitIcon from '../icons/HitIcon.tsx';
+import StandIcon from '../icons/StandIcon.tsx';
+import SplitIcon from '../icons/SplitIcon.tsx';
+import DoubleIcon from '../icons/DoubleIcon.tsx';
+import CardComponent from './blackjack/Card.tsx';
+import { createDeck, shuffleDeck, getHandValue, type Card as CardType, getCardValue } from './blackjack/deck.ts';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 interface BlackjackGameProps {
   onBack: () => void;
@@ -35,11 +32,11 @@ interface Hand {
 }
 
 const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { profile, adjustBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(1.00);
   const [betInput, setBetInput] = useState(betAmount.toFixed(2));
   const [gameState, setGameState] = useState<GamePhase>('betting');
-  const [deck, setDeck] = useState<CardType[]>([]);
+  const deckRef = useRef<CardType[]>([]);
   const [playerHands, setPlayerHands] = useState<Hand[]>([]);
   const [dealerHand, setDealerHand] = useState<CardType[]>([]);
   const [activeHandIndex, setActiveHandIndex] = useState(0);
@@ -137,17 +134,17 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
 
     setActiveHandIndex(0);
 
-    const newDeck = shuffleDeck(createDeck());
+    deckRef.current = shuffleDeck(createDeck());
     
     // Deal cards with a slight delay for sound
     setTimeout(() => playSound('deal'), 100);
-    const pCard1 = newDeck.pop();
+    const pCard1 = deckRef.current.pop();
     setTimeout(() => playSound('deal'), 300);
-    const dCard1 = newDeck.pop();
+    const dCard1 = deckRef.current.pop();
     setTimeout(() => playSound('deal'), 500);
-    const pCard2 = newDeck.pop();
+    const pCard2 = deckRef.current.pop();
     setTimeout(() => playSound('deal'), 700);
-    const dCard2 = newDeck.pop();
+    const dCard2 = deckRef.current.pop();
 
     if (!pCard1 || !pCard2 || !dCard1 || !dCard2) {
       console.error("Could not deal initial cards, deck is too small.");
@@ -163,7 +160,6 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     
     setPlayerHands([newPlayerHand]);
     setDealerHand(dHandCards);
-    setDeck(newDeck);
     
     const initialPlayerScore = getHandValue(pHandCards);
     if (initialPlayerScore === 21) {
@@ -180,8 +176,7 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     if (!currentHand) return; // SAFETY CHECK
 
     playSound('deal');
-    const newDeck = [...deck];
-    const newCard = newDeck.pop();
+    const newCard = deckRef.current.pop();
 
     if (!newCard) {
       if (isMounted.current) alert("The deck has run out of cards. The hand will stand automatically.");
@@ -202,7 +197,6 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     }
     newHands[activeHandIndex] = updatedHand;
     setPlayerHands(newHands);
-    setDeck(newDeck);
   };
 
   const handleStand = () => {
@@ -227,14 +221,12 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     await adjustBalance(-currentHand.bet);
     if (!isMounted.current) return;
     
-    const newDeck = [...deck];
-    const newCard = newDeck.pop();
+    const newCard = deckRef.current.pop();
 
     if (!newCard) {
       if (isMounted.current) alert("Not enough cards in deck to double down. Refunding double cost.");
       await adjustBalance(currentHand.bet);
       if (!isMounted.current) return;
-      setDeck(newDeck);
       handleStand();
       return;
     }
@@ -250,7 +242,6 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     newHands[activeHandIndex] = doubledHand;
 
     setPlayerHands(newHands);
-    setDeck(newDeck);
   };
 
   const handleSplit = async () => {
@@ -264,14 +255,12 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     await adjustBalance(-currentHand.bet);
     if (!isMounted.current) return;
 
-    const newDeck = [...deck];
-    const cardForFirstHand = newDeck.pop();
-    const cardForSecondHand = newDeck.pop();
+    const cardForFirstHand = deckRef.current.pop();
+    const cardForSecondHand = deckRef.current.pop();
     
     if (!cardForFirstHand || !cardForSecondHand) {
         if (isMounted.current) alert("Not enough cards in the deck to split. Refunding split cost.");
         await adjustBalance(currentHand.bet);
-        if (isMounted.current) setDeck(newDeck);
         return;
     }
     
@@ -284,7 +273,6 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
 
     newHands.splice(activeHandIndex, 1, firstHand, secondHand);
     setPlayerHands(newHands);
-    setDeck(newDeck);
   };
   
   useEffect(() => {
@@ -299,16 +287,12 @@ const BlackjackGame: React.FC<BlackjackGameProps> = ({ onBack }) => {
     const drawTimer = setTimeout(() => {
       if (!isMounted.current) return;
       playSound('deal');
-      setDeck(currentDeck => {
-        const newDeck = [...currentDeck];
-        const cardToDraw = newDeck.pop();
-        if (cardToDraw) {
-          setDealerHand(currentHand => [...currentHand, cardToDraw]);
-        } else {
-          setGameState('finished');
-        }
-        return newDeck;
-      });
+      const cardToDraw = deckRef.current.pop();
+      if (cardToDraw) {
+        setDealerHand(currentHand => [...currentHand, cardToDraw]);
+      } else {
+        setGameState('finished');
+      }
     }, 800);
     return () => clearTimeout(drawTimer);
   }, [gameState, dealerHand, playSound]);

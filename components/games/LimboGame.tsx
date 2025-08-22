@@ -1,19 +1,16 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import ChevronUpIcon from '../icons/ChevronUpIcon';
-import ChevronDownIcon from '../icons/ChevronDownIcon';
-import LimboRulesModal from './limbo/LimboRulesModal';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import ChevronUpIcon from '../icons/ChevronUpIcon.tsx';
+import ChevronDownIcon from '../icons/ChevronDownIcon.tsx';
+import LimboRulesModal from './limbo/LimboRulesModal.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -31,7 +28,7 @@ interface LimboGameProps {
 }
 
 const LimboGame: React.FC<LimboGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { profile, adjustBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(5.00);
   const [targetMultiplier, setTargetMultiplier] = useState(2.00);
   const [gamePhase, setGamePhase] = useState<GamePhase>('betting');

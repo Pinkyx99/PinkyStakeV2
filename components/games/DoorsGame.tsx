@@ -1,20 +1,17 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import ChevronLeftIcon from '../icons/ChevronLeftIcon';
-import ChevronRightIcon from '../icons/ChevronRightIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import DoorComponent from './doors/Door';
-import GameRulesModal from './doors/GameRulesModal';
-import { useUser } from '../../contexts/UserContext';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import ChevronLeftIcon from '../icons/ChevronLeftIcon.tsx';
+import ChevronRightIcon from '../icons/ChevronRightIcon.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import DoorComponent from './doors/Door.tsx';
+import GameRulesModal from './doors/GameRulesModal.tsx';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const INITIAL_DOOR_COUNT = 10;
 const MIN_BET = 0.20;
@@ -59,7 +56,7 @@ interface DoorsGameProps {
 }
 
 const DoorsGame: React.FC<DoorsGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { profile, adjustBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(1.0);
   const [betInput, setBetInput] = useState(betAmount.toFixed(2));
   const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');

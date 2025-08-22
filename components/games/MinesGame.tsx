@@ -1,15 +1,15 @@
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import { useSound } from '../../hooks/useSound';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import GemIcon from '../icons/GemIcon';
-import MineIcon from '../icons/MineIcon';
-import MinesTileIcon from '../icons/MinesTileIcon';
-import WinAnimation from '../WinAnimation';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import GemIcon from '../icons/GemIcon.tsx';
+import MineIcon from '../icons/MineIcon.tsx';
+import MinesTileIcon from '../icons/MinesTileIcon.tsx';
+import WinAnimation from '../WinAnimation.tsx';
 
 const GRID_SIZE = 25;
 const MIN_BET = 0.20;
@@ -33,14 +33,15 @@ const shuffle = <T,>(array: T[]): T[] => {
 };
 
 const MinesGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { profile, adjustBalance } = useAuth();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [mineCount, setMineCount] = useState(5);
     const [grid, setGrid] = useState<Tile[]>([]);
     const [gameState, setGameState] = useState<GameState>('betting');
     const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
-
+    
+    const secretGrid = useRef<Tile[]>([]);
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const { playSound } = useSound();
     const isMounted = useRef(true);
@@ -89,24 +90,30 @@ const MinesGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         await adjustBalance(-betAmount);
         if (!isMounted.current) return;
         
-        const newGrid: Tile[] = Array(GRID_SIZE).fill(null).map(() => ({ type: 'gem', revealed: false }));
-        for(let i=0; i<mineCount; i++) newGrid[i].type = 'mine';
+        const newGridSetup: Tile[] = Array(GRID_SIZE).fill(null).map(() => ({ type: 'gem', revealed: false }));
+        for(let i=0; i<mineCount; i++) newGridSetup[i].type = 'mine';
         
-        setGrid(shuffle(newGrid));
+        secretGrid.current = shuffle(newGridSetup);
+        setGrid(Array(GRID_SIZE).fill({ type: 'gem', revealed: false }));
         setGameState('playing');
     };
 
     const handleTileClick = (index: number) => {
         if (gameState !== 'playing' || grid[index].revealed) return;
 
-        const tile = grid[index];
+        const tile = secretGrid.current[index];
         const newGrid = [...grid];
-        newGrid[index].revealed = true;
+        newGrid[index] = { ...tile, revealed: true };
+        setGrid(newGrid);
         
         if (tile.type === 'mine') {
             playSound('pop');
-            setGrid(newGrid.map(t => ({...t, revealed: true})));
             setGameState('busted');
+            setTimeout(() => {
+                if (isMounted.current) {
+                    setGrid(secretGrid.current.map(t => ({...t, revealed: true})));
+                }
+            }, 500);
             setTimeout(() => {
                 if (isMounted.current) {
                     setGameState('betting');
@@ -115,7 +122,6 @@ const MinesGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             }, 3000);
         } else {
             playSound('reveal');
-            setGrid(newGrid);
         }
     };
 
@@ -130,9 +136,14 @@ const MinesGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         await adjustBalance(currentWinnings);
         if (!isMounted.current) return;
         
-        setGrid(grid.map(t => ({...t, revealed: true})));
         setGameState('busted'); // Use busted state to show grid and disable actions
         
+        setTimeout(() => {
+            if (isMounted.current) {
+                setGrid(secretGrid.current.map(t => ({...t, revealed: true})));
+            }
+        }, 100);
+
         setTimeout(() => {
             if (isMounted.current) {
                 setGameState('betting');
@@ -201,7 +212,7 @@ const MinesGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                                         <MinesTileIcon className="w-full h-full object-contain p-2" />
                                     </div>
                                     <div className={`mines-tile-back rounded-md flex items-center justify-center shadow-inner ${tile?.type === 'gem' ? 'bg-green-900/30' : 'bg-red-900/30'}`}>
-                                        {tile && (tile.type === 'gem' ? <GemIcon className="w-10 h-10 animate-gem-reveal" /> : <MineIcon className="w-10 h-10 animate-mine-reveal" />)}
+                                        {tile && tile.revealed && (tile.type === 'gem' ? <GemIcon className="w-10 h-10 animate-gem-reveal" /> : <MineIcon className="w-10 h-10 animate-mine-reveal" />)}
                                     </div>
                                 </div>
                              </div>

@@ -1,14 +1,14 @@
 import React, { useState, useCallback, useMemo } from 'react';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
-import { useAuth } from '../../contexts/AuthContext.tsx';
-import type { BoxItem, MysteryBox } from '../../types.ts';
-import UnboxingAnimation from './mysterybox/UnboxingAnimation.tsx';
-import { useSound } from '../../hooks/useSound.ts';
-import MinusIcon from '../icons/MinusIcon.tsx';
-import PlusIcon from '../icons/PlusIcon.tsx';
-import WinItemModal from './mysterybox/WinItemModal.tsx';
-import MultiWinModal from './mysterybox/MultiWinModal.tsx';
+import ArrowLeftIcon from '../../icons/ArrowLeftIcon.tsx';
+import useAnimatedBalance from '../../../hooks/useAnimatedBalance.tsx';
+import { useAuth } from '../../../contexts/AuthContext.tsx';
+import type { BoxItem, MysteryBox } from '../../../types.ts';
+import UnboxingAnimation from './UnboxingAnimation.tsx';
+import { useSound } from '../../../hooks/useSound.ts';
+import MinusIcon from '../../icons/MinusIcon.tsx';
+import PlusIcon from '../../icons/PlusIcon.tsx';
+import WinItemModal from './WinItemModal.tsx';
+import MultiWinModal from './MultiWinModal.tsx';
 
 const ItemCard: React.FC<{ item: BoxItem }> = ({ item }) => {
     return (
@@ -30,8 +30,8 @@ interface MysteryBoxGameProps {
 }
 
 const MysteryBoxGame: React.FC<MysteryBoxGameProps> = ({ onBack, box, addToMysteryBoxInventory }) => {
-    const { profile: user, adjustBalance } = useAuth();
-    const animatedBalance = useAnimatedBalance(user?.balance ?? 0);
+    const { profile, adjustBalance } = useAuth();
+    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
     const [isUnboxing, setIsUnboxing] = useState(false);
     const [winningItem, setWinningItem] = useState<BoxItem | null>(null);
     const [showWinModal, setShowWinModal] = useState(false);
@@ -42,7 +42,7 @@ const MysteryBoxGame: React.FC<MysteryBoxGameProps> = ({ onBack, box, addToMyste
 
     const handleUnbox = useCallback(async () => {
         const totalCost = box.price * boxCount;
-        if (!user || user.balance < totalCost) {
+        if (!profile || profile.balance < totalCost) {
             alert("Not enough balance to open this box.");
             return;
         }
@@ -81,7 +81,7 @@ const MysteryBoxGame: React.FC<MysteryBoxGameProps> = ({ onBack, box, addToMyste
             setWinningItems(winners);
             setShowMultiWinModal(true);
         }
-    }, [user, adjustBalance, playSound, box, boxCount]);
+    }, [profile, adjustBalance, playSound, box, boxCount]);
 
     const handleAnimationEnd = useCallback((item: BoxItem) => {
         setIsUnboxing(false);

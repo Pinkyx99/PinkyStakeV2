@@ -1,18 +1,15 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import UndoIcon from '../icons/UndoIcon';
-import RebetIcon from '../icons/RebetIcon';
-import ClearIcon from '../icons/ClearIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import { useUser } from '../../contexts/UserContext';
-import RouletteRulesModal from './roulette/RouletteRulesModal';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import UndoIcon from '../icons/UndoIcon.tsx';
+import RebetIcon from '../icons/RebetIcon.tsx';
+import ClearIcon from '../icons/ClearIcon.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import RouletteRulesModal from './roulette/RouletteRulesModal.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -77,7 +74,7 @@ const BetArea: React.FC<{ label: string, onBet: () => void, betAmount?: number, 
 );
 
 const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { profile, adjustBalance } = useAuth();
     const [selectedChip, setSelectedChip] = useState(CHIP_VALUES[0]);
     const [bets, setBets] = useState<Bets>({});
     const [lastBets, setLastBets] = useState<Bets>({});
@@ -168,13 +165,13 @@ const RouletteGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                 if (soundTimeoutRef.current) clearTimeout(soundTimeoutRef.current);
                 return;
             }
-            playSound('spin_tick');
-            const progress = elapsedTime / spinDuration;
+            const progress = 1 - (elapsedTime / spinDuration);
+            playSound('spin_tick', { progress });
             const easeOutQuad = (t: number) => t * (2 - t);
             const easedProgress = easeOutQuad(progress);
             const minInterval = 80;
             const maxInterval = 600;
-            const nextInterval = minInterval + (maxInterval - minInterval) * easedProgress;
+            const nextInterval = minInterval + (maxInterval - minInterval) * (1-easedProgress);
             soundTimeoutRef.current = setTimeout(playTickingSound, nextInterval);
         };
         playTickingSound();

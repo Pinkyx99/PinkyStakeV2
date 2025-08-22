@@ -1,15 +1,16 @@
 import React from 'react';
-import type { BoxItem } from '../../../types';
-import { useUser } from '../../../contexts/UserContext';
-import { useSound } from '../../../hooks/useSound';
+import type { BoxItem } from '../../../types.ts';
+import { useAuth } from '../../../contexts/AuthContext.tsx';
+import { useSound } from '../../../hooks/useSound.ts';
 
 interface WinItemModalProps {
     item: BoxItem;
     onClose: () => void;
+    addToMysteryBoxInventory: (item: BoxItem) => void;
 }
 
-const WinItemModal: React.FC<WinItemModalProps> = ({ item, onClose }) => {
-    const { adjustBalance, addToInventory } = useUser();
+const WinItemModal: React.FC<WinItemModalProps> = ({ item, onClose, addToMysteryBoxInventory }) => {
+    const { adjustBalance } = useAuth();
     const { playSound } = useSound();
 
     const handleSell = () => {
@@ -20,7 +21,7 @@ const WinItemModal: React.FC<WinItemModalProps> = ({ item, onClose }) => {
 
     const handleKeep = () => {
         playSound('click');
-        addToInventory(item);
+        addToMysteryBoxInventory(item);
         onClose();
     };
 

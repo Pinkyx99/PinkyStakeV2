@@ -1,18 +1,15 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import WheelRulesModal from './wheel/WheelRulesModal';
-import { SEGMENT_CONFIG, MULTIPLIER_COLORS, type RiskLevel, type SegmentCount } from './wheel/payouts';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import WheelRulesModal from './wheel/WheelRulesModal.tsx';
+import { SEGMENT_CONFIG, MULTIPLIER_COLORS, type RiskLevel, type SegmentCount } from './wheel/payouts.ts';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -23,7 +20,7 @@ const SEGMENT_COUNTS: SegmentCount[] = [10, 20, 30, 40, 50];
 type GamePhase = 'betting' | 'spinning' | 'result';
 
 const WheelGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+    const { profile, adjustBalance } = useAuth();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [riskLevel, setRiskLevel] = useState<RiskLevel>('Medium');

@@ -1,16 +1,13 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import FlipRulesModal from './flip/FlipRulesModal';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import FlipRulesModal from './flip/FlipRulesModal.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_BET = 0.20;
 const MAX_BET = 1000.00;
@@ -20,8 +17,12 @@ type GameState = 'betting' | 'flipping' | 'won' | 'lost';
 const HeadsIcon: React.FC<{ className?: string }> = ({ className }) => <svg viewBox="0 0 100 100" className={className}><text x="50" y="68" fontSize="60" textAnchor="middle" fill="currentColor" fontWeight="bold">H</text></svg>;
 const TailsIcon: React.FC<{ className?: string }> = ({ className }) => <svg viewBox="0 0 100 100" className={className}><text x="50" y="68" fontSize="60" textAnchor="middle" fill="currentColor" fontWeight="bold">T</text></svg>;
 
-const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
+interface FlipGameProps {
+    onBack: () => void;
+}
+
+export default function FlipGame({ onBack }: FlipGameProps) {
+    const { profile, adjustBalance } = useAuth();
     const [betAmount, setBetAmount] = useState(5.00);
     const [betInput, setBetInput] = useState(betAmount.toFixed(2));
     const [choice, setChoice] = useState<Choice>('heads');
@@ -69,7 +70,6 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         setGameState('flipping');
         
         const result: Choice = Math.random() < 0.5 ? 'heads' : 'tails';
-        setFlipResult(result);
 
         if (coinInnerRef.current) {
             const currentTransform = coinInnerRef.current.style.transform;
@@ -88,6 +88,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         setTimeout(() => {
             if (!isMounted.current) return;
 
+            setFlipResult(result);
             setHistory(h => [result, ...h].slice(0, 20));
             if (result === choice) {
                 playSound('flip_win');
@@ -106,7 +107,10 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
     const handleCashout = async () => {
         if (gameState !== 'won') return;
         playSound('cashout');
-        setWinData({ amount: winnings, key: Date.now() });
+        const netWinnings = winnings - betAmount;
+        if (netWinnings > 0) {
+           setWinData({ amount: netWinnings, key: Date.now() });
+        }
         await adjustBalance(winnings);
         if (!isMounted.current) return;
         resetForNewBet();
@@ -136,7 +140,7 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
                 <div className="flex-1 flex items-center gap-4">
                     <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white"><ArrowLeftIcon className="w-6 h-6" /></button>
-                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-6 h-6"/></button>
                 </div>
                 <div className="flex-1 flex justify-center bg-slate-900/50 backdrop-blur-sm rounded-md px-4 py-1.5 border border-slate-700/50">
                     <span className="text-lg font-bold text-white">{animatedBalance.toFixed(2)}</span>
@@ -180,29 +184,22 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                             <div className="flex items-center bg-[#0f172a] rounded-md p-1">
                                 <button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={!isConfigPhase} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 bg-[#334155] rounded-sm"><MinusIcon className="w-5 h-5"/></button>
                                 <input type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={!isConfigPhase} className="w-24 bg-transparent text-center font-bold text-lg outline-none disabled:cursor-not-allowed" />
+                                <span className="text-gray-500 pr-2 text-sm font-bold">EUR</span>
                                 <button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={!isConfigPhase} className="p-2 text-gray-400 hover:text-white disabled:text-gray-600 bg-[#334155] rounded-sm"><PlusIcon className="w-5 h-5"/></button>
                             </div>
                         </div>
-                        <div className="flex-grow flex items-center justify-center gap-4">
-                            <button
-                                onClick={() => setChoice('heads')}
-                                disabled={!isConfigPhase}
-                                className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${choice === 'heads' ? 'border-amber-400 bg-amber-400/20' : 'border-transparent hover:bg-slate-700/50'}`}
-                            >
-                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-amber-400 to-amber-600 text-amber-900"><HeadsIcon className="w-8 h-8"/></div>
-                                <span className="mt-2 font-bold text-sm">Heads</span>
+                        <div className="flex-1 grid grid-cols-2 gap-2">
+                            <button onClick={() => setChoice('heads')} disabled={!isConfigPhase} className={`h-12 flex items-center justify-center gap-2 rounded-md transition-all ${choice === 'heads' ? 'bg-amber-500 ring-2 ring-amber-300' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                                <HeadsIcon className="w-8 h-8 text-amber-900"/>
+                                <span className="font-bold">Heads</span>
                             </button>
-                            <button
-                                onClick={() => setChoice('tails')}
-                                disabled={!isConfigPhase}
-                                className={`flex flex-col items-center p-3 rounded-lg border-2 transition-all ${choice === 'tails' ? 'border-slate-400 bg-slate-400/20' : 'border-transparent hover:bg-slate-700/50'}`}
-                            >
-                                <div className="w-12 h-12 rounded-full flex items-center justify-center bg-gradient-to-br from-slate-400 to-slate-600 text-slate-900"><TailsIcon className="w-8 h-8"/></div>
-                                <span className="mt-2 font-bold text-sm">Tails</span>
+                             <button onClick={() => setChoice('tails')} disabled={!isConfigPhase} className={`h-12 flex items-center justify-center gap-2 rounded-md transition-all ${choice === 'tails' ? 'bg-slate-300 ring-2 ring-slate-100' : 'bg-slate-700 hover:bg-slate-600'}`}>
+                                <TailsIcon className="w-8 h-8 text-slate-800"/>
+                                <span className="font-bold">Tails</span>
                             </button>
                         </div>
                     </div>
-                    <div className="w-full md:w-64">
+                    <div className="w-full md:w-80 h-16 md:h-auto">
                         {actionButton()}
                     </div>
                 </div>
@@ -210,6 +207,4 @@ const FlipGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             <FlipRulesModal isOpen={isRulesModalOpen} onClose={() => setIsRulesModalOpen(false)} />
         </div>
     );
-};
-
-export default FlipGame;
+}

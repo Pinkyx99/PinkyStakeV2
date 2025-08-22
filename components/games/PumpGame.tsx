@@ -1,22 +1,21 @@
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import { useUser } from '../../contexts/UserContext';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import PumpRulesModal from './pump/PumpRulesModal';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import PumpRulesModal from './pump/PumpRulesModal.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "../ui/select"
-import { Label } from "../ui/label"
-import { Input } from "../ui/input"
-import { Button } from "../ui/button"
+} from "../ui/select.tsx"
+import { Label } from "../ui/label.tsx"
+import { Input } from "../ui/input.tsx"
+import { Button } from "../ui/button.tsx"
 
 
 const MIN_BET = 0.20;
@@ -50,225 +49,4 @@ const Balloon = ({ multiplier, scale, gameState }: { multiplier: number; scale: 
                     <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
                 </radialGradient>
             </defs>
-            <path d="M50 0 C 95 0, 100 35, 100 60 C 100 85, 80 100, 50 100 C 20 100, 0 85, 0 60 C 0 35, 5 0, 50 0 Z" fill="#ef4444" />
-            <path d="M50 0 C 95 0, 100 35, 100 60 C 100 85, 80 100, 50 100 C 20 100, 0 85, 0 60 C 0 35, 5 0, 50 0 Z" fill="url(#balloonGloss)" />
-            <path d="M48 98 Q 50 102 52 98 L 50 110 Z" fill="#dc2626" />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center pointer-events-none -mt-4">
-            <span className="text-2xl text-white font-bold" style={{ textShadow: '0 1px 3px rgba(0,0,0,0.5)' }}>
-                {multiplier.toFixed(2)}x
-            </span>
-        </div>
-    </div>
-);
-
-const Pump = ({ pumping }: { pumping: boolean }) => (
-    <div className={`relative w-24 h-12 flex justify-center items-end ${pumping ? 'animate-pump-press' : ''}`}>
-        <div className="absolute w-20 h-4 bg-slate-600 rounded-sm bottom-0"></div>
-        <div className="absolute w-6 h-10 bg-slate-700 rounded-t-md bottom-4"></div>
-        <div className="absolute w-16 h-4 bg-slate-500 rounded-sm bottom-10"></div>
-    </div>
-);
-
-const MultiplierHistoryBar = ({ history }: { history: { multiplier: number; busted: boolean }[] }) => (
-    <div className="absolute top-0 left-0 right-0 p-3 z-10">
-        <div className="flex items-center gap-2 overflow-x-auto pb-2" style={{ scrollbarWidth: 'none' }}>
-            {history.map((item, index) => (
-                <div key={index} className={`bg-slate-800/60 px-3 py-1 rounded text-sm font-semibold shrink-0 ${item.busted ? 'text-red-500' : 'text-gray-300'}`}>
-                    {item.multiplier.toFixed(2)}x
-                </div>
-            ))}
-        </div>
-    </div>
-);
-
-const PumpGame: React.FC<{ onBack: () => void }> = ({ onBack }) => {
-    const { profile, adjustBalance } = useUser();
-    const [betAmount, setBetAmount] = useState(5.00);
-    const [betInput, setBetInput] = useState(betAmount.toFixed(2));
-    const [difficulty, setDifficulty] = useState<Difficulty>('Hard');
-    const [gameState, setGameState] = useState<GameState>('config');
-    const [multiplier, setMultiplier] = useState(1.00);
-    const [pumpCount, setPumpCount] = useState(0);
-    const [isPumping, setIsPumping] = useState(false);
-    const [isRulesModalOpen, setIsRulesModalOpen] = useState(false);
-    const [winData, setWinData] = useState<{ amount: number; key: number } | null>(null);
-    const [history, setHistory] = useState([
-        { multiplier: 1.23, busted: false }, { multiplier: 1.55, busted: false }, { multiplier: 1.98, busted: false }, { multiplier: 2.56, busted: false }, { multiplier: 3.36, busted: false }, { multiplier: 4.48, busted: false }, { multiplier: 6.08, busted: false }, { multiplier: 8.41, busted: true }, { multiplier: 11.92, busted: false }, { multiplier: 17.34, busted: false },
-    ].reverse());
-
-    const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
-    const isMounted = useRef(true);
-    const { playSound } = useSound();
-    
-    useEffect(() => { isMounted.current = true; return () => { isMounted.current = false; }; }, []);
-    useEffect(() => setBetInput(betAmount.toFixed(2)), [betAmount]);
-
-    const balloonScale = useMemo(() => {
-        const baseScale = 1.0;
-        if (gameState === 'config') return baseScale;
-        const growthFactor = Math.log(multiplier) * 0.15;
-        return baseScale + growthFactor;
-    }, [multiplier, gameState]);
-
-    const handleBetInputChange = (e: React.ChangeEvent<HTMLInputElement>) => setBetInput(e.target.value);
-    const handleBetInputBlur = () => {
-        let value = parseFloat(betInput);
-        if (isNaN(value) || value < MIN_BET) value = MIN_BET;
-        if (value > MAX_BET) value = MAX_BET;
-        setBetAmount(value);
-    };
-
-    const handlePrimaryAction = useCallback(async () => {
-        if (gameState === 'busted' || gameState === 'cashed_out') {
-            playSound('click');
-            setGameState('config');
-            setMultiplier(1.00);
-            setPumpCount(0);
-            return;
-        }
-
-        if (gameState === 'playing' && isPumping) return;
-
-        const currentDifficultyData = PUMP_DATA[difficulty];
-        if (pumpCount >= currentDifficultyData.length && gameState === 'playing') return;
-        
-        const isFirstPump = gameState === 'config';
-        if (isFirstPump) {
-            if (!profile || betAmount > profile.balance) return;
-            playSound('bet');
-            await adjustBalance(-betAmount);
-            if (!isMounted.current) return;
-            setGameState('playing');
-        } else { // It's a subsequent pump
-             setIsPumping(true);
-             playSound('pump');
-
-             setTimeout(() => {
-                if (!isMounted.current) return;
-                
-                const pumpData = currentDifficultyData[pumpCount];
-                const popChance = 1 - pumpData.wc;
-
-                if (Math.random() < popChance) {
-                    playSound('pop');
-                    const bustMultiplier = pumpCount > 0 ? currentDifficultyData[pumpCount - 1].m : 1.00;
-                    setHistory(h => [{ multiplier: bustMultiplier, busted: true }, ...h].slice(0, 20));
-                    setGameState('busted');
-                } else {
-                    setPumpCount(p => p + 1);
-                    setMultiplier(pumpData.m);
-                }
-                setIsPumping(false);
-             }, 200);
-        }
-    }, [gameState, isPumping, difficulty, pumpCount, betAmount, profile, adjustBalance, playSound]);
-    
-    const handleCashout = async () => {
-        if (gameState !== 'playing' || pumpCount === 0 || isPumping) return;
-        
-        playSound('cashout');
-        const winnings = betAmount * multiplier;
-        const netWinnings = winnings - betAmount;
-        if(netWinnings > 0) {
-           setWinData({ amount: netWinnings, key: Date.now() });
-        }
-        setHistory(h => [{ multiplier: multiplier, busted: false }, ...h].slice(0, 20));
-        await adjustBalance(winnings);
-
-        if (!isMounted.current) return;
-        setGameState('cashed_out');
-    };
-    
-    const primaryButtonText = useMemo(() => {
-        if (gameState === 'config') return 'Bet';
-        if (gameState === 'playing') return 'Pump';
-        return 'Bet Again';
-    }, [gameState]);
-
-    const canBet = profile && betAmount <= profile.balance;
-    const isConfigPhase = gameState === 'config';
-    const canPumpMore = gameState === 'playing' && pumpCount < PUMP_DATA[difficulty].length;
-
-    return (
-        <div className="bg-[#1a1d3a] h-screen flex flex-col font-poppins text-white select-none overflow-hidden">
-            {winData && <WinAnimation key={winData.key} amount={winData.amount} onComplete={() => setWinData(null)} />}
-            
-            <header className="absolute top-0 left-0 right-0 z-20 flex justify-between items-center p-4">
-                <div className="flex-1 flex items-center gap-4">
-                    <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white"><ArrowLeftIcon className="w-6 h-6" /></button>
-                    <button onClick={() => setIsRulesModalOpen(true)} className="text-gray-400 hover:text-white"><GameRulesIcon className="w-5 h-5"/></button>
-                </div>
-                <div className="flex-1 flex justify-center bg-slate-900/50 backdrop-blur-sm rounded-md px-4 py-1.5 border border-slate-700/50">
-                    <span className="text-lg font-bold text-white">{animatedBalance.toFixed(2)}</span>
-                    <span className="text-sm text-gray-400 ml-2">EUR</span>
-                </div>
-                 <div className="flex-1" />
-            </header>
-
-            <MultiplierHistoryBar history={history} />
-            
-            <main className="flex-grow w-full relative flex flex-col items-center justify-center overflow-hidden pt-12">
-                <div className="flex flex-col items-center justify-center">
-                    <Balloon multiplier={multiplier} scale={balloonScale} gameState={gameState} />
-                    <Pump pumping={isPumping} />
-                </div>
-
-                {gameState === 'busted' && (
-                    <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-                        <div className="absolute w-64 h-64 rounded-full bg-red-500/80 animate-pump-explode"></div>
-                        <span className="text-8xl font-bebas text-white animate-pump-pop-text" style={{ textShadow: '0 0 15px white' }}>POP!</span>
-                    </div>
-                )}
-            </main>
-
-            <footer className="shrink-0 bg-[#0f172a] p-3 border-t-2 border-slate-800 z-10">
-                <div className="w-full max-w-4xl mx-auto flex items-end justify-between gap-4">
-                    <div className="flex items-end gap-4">
-                       <div>
-                         <Label htmlFor="bet-amount" className="text-gray-400 text-xs mb-1">Bet Amount</Label>
-                         <div className="flex items-center bg-[#2f324d] rounded-md h-12">
-                            <Input id="bet-amount" type="text" value={betInput} onChange={handleBetInputChange} onBlur={handleBetInputBlur} disabled={!isConfigPhase} className="w-24 bg-transparent border-0 text-center font-bold text-lg focus-visible:ring-0" />
-                            <span className="text-gray-500 pr-2 font-semibold">EUR</span>
-                            <div className="flex flex-col gap-0.5 pr-1">
-                                <Button onClick={() => setBetAmount(v => Math.min(MAX_BET, v * 2))} disabled={!isConfigPhase} size="sm" className="h-5 px-2 bg-slate-600 hover:bg-slate-500">2x</Button>
-                                <Button onClick={() => setBetAmount(v => Math.max(MIN_BET, v / 2))} disabled={!isConfigPhase} size="sm" className="h-5 px-2 bg-slate-600 hover:bg-slate-500">1/2</Button>
-                            </div>
-                         </div>
-                       </div>
-                       <div>
-                         <Label htmlFor="difficulty" className="text-gray-400 text-xs mb-1">Difficulty</Label>
-                         <Select value={difficulty} onValueChange={(v: Difficulty) => setDifficulty(v)} disabled={!isConfigPhase}>
-                            <SelectTrigger id="difficulty" className="w-36 bg-[#2f324d] border-0 h-12 font-bold focus:ring-0">
-                                <SelectValue placeholder="Difficulty" />
-                            </SelectTrigger>
-                            <SelectContent className="bg-[#2f324d] text-white border-slate-600">
-                                {DIFFICULTIES.map(d => <SelectItem key={d} value={d} className="font-semibold">{d}</SelectItem>)}
-                            </SelectContent>
-                         </Select>
-                       </div>
-                    </div>
-                    <div className="flex items-stretch gap-4">
-                        <Button
-                            onClick={handlePrimaryAction}
-                            disabled={!canBet || isPumping || (!isConfigPhase && !canPumpMore && gameState !== 'busted' && gameState !== 'cashed_out')}
-                            className="w-40 h-12 text-lg font-bold bg-slate-700 hover:bg-slate-600"
-                        >
-                           {primaryButtonText}
-                        </Button>
-                        <Button
-                            onClick={handleCashout}
-                            disabled={gameState !== 'playing' || pumpCount === 0 || isPumping}
-                            className="w-40 h-12 text-lg font-bold bg-green-600 hover:bg-green-500 text-black"
-                        >
-                            Cashout
-                        </Button>
-                    </div>
-                </div>
-            </footer>
-             <PumpRulesModal isOpen={isRulesModalOpen} onClose={() => setIsRulesModalOpen(false)} />
-        </div>
-    );
-};
-
-export default PumpGame;
+            <path d="M50 0 C 95

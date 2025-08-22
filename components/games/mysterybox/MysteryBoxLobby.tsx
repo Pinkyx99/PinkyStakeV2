@@ -1,30 +1,29 @@
-
 import React from 'react';
-import ArrowLeftIcon from '../../icons/ArrowLeftIcon';
-import useAnimatedBalance from '../../../hooks/useAnimatedBalance';
-import { useUser } from '../../../contexts/UserContext';
-import { allMysteryBoxes } from './data';
-import MysteryBoxCard from './MysteryBoxCard';
-import type { MysteryBox } from '../../../types';
+import ArrowLeftIcon from '../../icons/ArrowLeftIcon.tsx';
+import useAnimatedBalance from '../../../hooks/useAnimatedBalance.tsx';
+import { useAuth } from '../../../contexts/AuthContext.tsx';
+import { allMysteryBoxes } from './data.ts';
+import MysteryBoxCard from './MysteryBoxCard.tsx';
+import type { MysteryBox } from '../../../types.ts';
+import type { Page } from '../../../App.tsx';
 
 interface MysteryBoxLobbyProps {
-  onBack: () => void;
-  onNavigate: (path: string) => void;
+  setPage: (page: Page) => void;
 }
 
-const MysteryBoxLobby: React.FC<MysteryBoxLobbyProps> = ({ onBack, onNavigate }) => {
-    const { profile } = useUser();
+const MysteryBoxLobby: React.FC<MysteryBoxLobbyProps> = ({ setPage }) => {
+    const { profile } = useAuth();
     const animatedBalance = useAnimatedBalance(profile?.balance ?? 0);
 
     const handleSelectBox = (box: MysteryBox) => {
-        onNavigate(`/game/mysterybox/${box.id}`);
+        setPage({ name: 'mysterybox-case', id: box.id });
     };
 
     return (
         <div className="bg-[#0f1124] min-h-screen flex flex-col font-poppins text-white">
             <header className="shrink-0 w-full bg-[#1a1b2f] p-3 flex items-center justify-between z-10">
                 <div className="flex items-center gap-4">
-                    <button onClick={onBack} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
+                    <button onClick={() => setPage({ name: 'lobby' })} aria-label="Back to games" className="text-gray-400 hover:text-white transition-colors p-1 rounded-full hover:bg-white/10">
                         <ArrowLeftIcon className="w-6 h-6" />
                     </button>
                     <h1 className="text-cyan-400 text-xl font-bold uppercase">Mystery Boxes</h1>

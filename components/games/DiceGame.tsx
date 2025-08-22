@@ -1,20 +1,17 @@
-
-
-
 import React, { useState, useMemo, useCallback, useEffect, useRef } from 'react';
-import PlusIcon from '../icons/PlusIcon';
-import MinusIcon from '../icons/MinusIcon';
-import ChevronUpIcon from '../icons/ChevronUpIcon';
-import ChevronDownIcon from '../icons/ChevronDownIcon';
-import SoundOnIcon from '../icons/SoundOnIcon';
-import GameRulesIcon from '../icons/GameRulesIcon';
-import ArrowLeftIcon from '../icons/ArrowLeftIcon';
-import SwitchIcon from '../icons/SwitchIcon';
-import useAnimatedBalance from '../../hooks/useAnimatedBalance';
-import DiceRulesModal from './dice/DiceRulesModal';
-import { useUser } from '../../contexts/UserContext';
-import { useSound } from '../../hooks/useSound';
-import WinAnimation from '../WinAnimation';
+import PlusIcon from '../icons/PlusIcon.tsx';
+import MinusIcon from '../icons/MinusIcon.tsx';
+import ChevronUpIcon from '../icons/ChevronUpIcon.tsx';
+import ChevronDownIcon from '../icons/ChevronDownIcon.tsx';
+import SoundOnIcon from '../icons/SoundOnIcon.tsx';
+import GameRulesIcon from '../icons/GameRulesIcon.tsx';
+import ArrowLeftIcon from '../icons/ArrowLeftIcon.tsx';
+import SwitchIcon from '../icons/SwitchIcon.tsx';
+import useAnimatedBalance from '../../hooks/useAnimatedBalance.tsx';
+import DiceRulesModal from './dice/DiceRulesModal.tsx';
+import { useAuth } from '../../contexts/AuthContext.tsx';
+import { useSound } from '../../hooks/useSound.ts';
+import WinAnimation from '../WinAnimation.tsx';
 
 const MIN_ROLL = 2;
 const MAX_ROLL = 98;
@@ -30,7 +27,7 @@ interface DiceGameProps {
 }
 
 const DiceGame: React.FC<DiceGameProps> = ({ onBack }) => {
-  const { profile, adjustBalance } = useUser();
+  const { profile, adjustBalance } = useAuth();
   const [betAmount, setBetAmount] = useState(5.00);
   const [betInput, setBetInput] = useState(betAmount.toFixed(2));
   const [mode, setMode] = useState<Mode>('over');
